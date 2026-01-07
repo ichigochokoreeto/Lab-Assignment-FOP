@@ -1,0 +1,369 @@
+//create class StoreSystem
+//Manager-> User ID: C6001,Password: admin123
+
+//Login/Logout and Employee Registration
+//Attendance Log
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+// 1. Employee Class (Data Model)
+class Employee {
+    private String id;
+    private String name;
+    private String password;
+    private String role;   // "Manager", "Full-time", or "Part-time"
+    private String outlet; // Track which store they belong to
+
+    public Employee(String id, String name, String password, String role, String outlet) {
+        this.id = id;
+        this.name = name;
+        this.password = password;
+        this.role = role;
+        this.outlet = outlet;
+    }
+
+    // Accessor
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public String getPassword() { return password; }
+    public String getRole() { return role; }
+    public String getOutlet() { return outlet; }
+
+    // Convert to CSV string: "ID,Name,Pass,Role,Outlet"
+    public String toCSV() {
+        return id + "," + name + "," + password + "," + role + "," + outlet;
+    }
+}
+
+// 2. Attendance Class (Data Model)
+class Attendance {
+    private String employeeId;
+    private LocalDate date;
+    private LocalTime clockInTime;
+    private LocalTime clockOutTime;
+    private String outlet; // Track where they worked this specific shift
+
+    public Attendance(String employeeId, LocalDate date, LocalTime clockInTime, LocalTime clockOutTime, String outlet) {
+        this.employeeId = employeeId;
+        this.date = date;
+        this.clockInTime = clockInTime;
+        this.clockOutTime = clockOutTime;
+        this.outlet = outlet;
+    }
+
+    // Mutator & Accessor
+    public void setClockOutTime(LocalTime clockOutTime) { 
+        this.clockOutTime = clockOutTime; 
+    }
+    public String getEmployeeId() { return employeeId; }
+    public LocalDate getDate() { return date; }
+    public LocalTime getClockInTime() { return clockInTime; }
+    public LocalTime getClockOutTime() { return clockOutTime; }
+    public String getOutlet() { return outlet; }
+
+    // Convert to CSV string
+    public String toCSV() {
+        String out = (clockOutTime == null) ? "null" : clockOutTime.toString();
+        return employeeId + "," + date + "," + clockInTime + "," + out + "," + outlet;
+    }
+}
+
+// 3. Main System Class (Logic)
+public class StoreSystem {
+    // File Config
+    private static final String EMPLOYEE_FILE = "employees.csv";
+    private static final String ATTENDANCE_FILE = "attendance.csv";
+    
+    // Memory Storage
+    private static List<Employee> employees = new ArrayList<>();
+    private static List<Attendance> attendanceLogs = new ArrayList<>();
+    
+    // Tools
+    private static Scanner scanner = new Scanner(System.in);
+    private static Employee currentUser = null; 
+
+    public static void main(String[] args) {
+        loadData(); // Load CSVs on startup
+
+        // Create Default Manager if system is fresh
+        if (employees.isEmpty()) {
+            employees.add(new Employee("C6001", "Tan Guan Han", "admin123", "Manager", "C60 (Kuala Lumpur City Centre)"));
+            saveEmployees();
+            System.out.println("System: Default Manager created (ID: C6001, Pass: admin123)");
+        }
+
+        // Main App Loop
+        boolean running = true;
+        while (running) {
+            if (currentUser == null) {
+                showLoginMenu();
+            } else {
+                showMainMenu();
+            }
+        }
+    }
+
+    // --- HELPER: Format Time to "09:58 a.m." ---
+    private static String formatTime(LocalTime time) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm a");
+        return time.format(formatter)
+                   .toLowerCase()
+                   .replace("am", "a.m.")
+                   .replace("pm", "p.m.");
+    }
+
+    // --- LOGIN MENU ---
+    private static void showLoginMenu() {
+        System.out.println("\n=== GOLDENHOUR STORE SYSTEM ===");
+        System.out.println("1. Login");
+        System.out.println("2. Exit");
+        System.out.print("Select: ");
+        String choice = scanner.nextLine();
+
+        if (choice.equals("1")) {
+            performLogin();
+        } else if (choice.equals("2")) {
+            System.out.println("Shutting down...");
+            System.exit(0);
+        } else {
+            System.out.println("Invalid option.");
+        }
+    }
+
+    private static void performLogin() {
+        System.out.println("\n=== Employee Login ==="); 
+        System.out.print("Enter User ID: ");
+        String id = scanner.nextLine();
+        System.out.print("Enter Password: ");
+        String pass = scanner.nextLine();
+
+        boolean found = false;
+        for (Employee e : employees) {
+            if (e.getId().equalsIgnoreCase(id) && e.getPassword().equals(pass)) {
+                currentUser = e;
+                found = true;
+                System.out.println("Login Successful!"); 
+                break;
+            }
+        }
+
+        if (!found) {
+            System.out.println("Login Failed: Invalid User ID or Password."); 
+        }
+    }
+
+    private static void logout() {
+        System.out.println("Logging out...");
+        currentUser = null; 
+    }
+
+    // --- MAIN DASHBOARD ---
+    private static void showMainMenu() {
+        System.out.println("\n=== Main Menu (" + currentUser.getName() + ") ===");
+        System.out.println("1. Clock In");
+        System.out.println("2. Clock Out");
+        
+        // Manager Only
+        if (currentUser.getRole().equalsIgnoreCase("Manager")) {
+            System.out.println("3. Register New Employee");
+        }
+        
+        System.out.println("4. Logout");
+        System.out.print("Select: ");
+        String choice = scanner.nextLine();
+
+        switch (choice) {
+            case "1": performClockIn(); break;
+            case "2": performClockOut(); break;
+            case "3":
+                if (currentUser.getRole().equalsIgnoreCase("Manager")) {
+                    registerEmployee();
+                } else {
+                    System.out.println("Unauthorized.");
+                }
+                break;
+            case "4": logout(); break;
+            default: System.out.println("Invalid option.");
+        }
+    }
+
+    // --- FEATURE: REGISTER EMPLOYEE ---
+    private static void registerEmployee() {
+        System.out.println("\n=== Register New Employee ==="); 
+        
+        System.out.print("Enter Employee Name: ");
+        String name = scanner.nextLine();
+        
+        String id;
+        while (true) {
+            System.out.print("Enter Employee ID: ");
+            id = scanner.nextLine();
+            boolean exists = false;
+            for (Employee e : employees) {
+                if (e.getId().equalsIgnoreCase(id)) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) break;
+            System.out.println("Error: Employee ID already exists. Try again.");
+        }
+
+        System.out.print("Set Password: ");
+        String pass = scanner.nextLine();
+        
+        System.out.print("Set Role (Part-time/Full-time/Manager): ");
+        String role = scanner.nextLine();
+
+        System.out.print("Assign Outlet (e.g., C60 (Kuala Lumpur City Centre)): ");
+        String outlet = scanner.nextLine();
+
+        Employee newEmp = new Employee(id, name, pass, role, outlet);
+        employees.add(newEmp);
+        saveEmployees(); 
+        System.out.println("Employee registered successfully!"); 
+    }
+
+    // --- FEATURE: CLOCK IN ---
+    private static void performClockIn() {
+        System.out.println("\n=== Attendance Clock In ==="); 
+        LocalDate today = LocalDate.now();
+        
+        // Prevent double clock-in
+        for (Attendance a : attendanceLogs) {
+            if (a.getEmployeeId().equals(currentUser.getId()) && a.getDate().equals(today) && a.getClockOutTime() == null) {
+                System.out.println("You are already clocked in.");
+                return;
+            }
+        }
+
+        LocalTime now = LocalTime.now();
+        Attendance log = new Attendance(currentUser.getId(), today, now, null, currentUser.getOutlet());
+        attendanceLogs.add(log);
+        saveAttendance();
+
+        // Print Receipt
+        System.out.println("Employee ID: " + currentUser.getId());
+        System.out.println("Name: " + currentUser.getName());
+        System.out.println("Outlet: " + currentUser.getOutlet());
+        System.out.println(); // Blank Line
+        System.out.println("Clock In Successful!"); 
+        System.out.println("Date: " + today);
+        System.out.println("Time: " + formatTime(now));
+    }
+
+    // --- FEATURE: CLOCK OUT ---
+    private static void performClockOut() {
+        System.out.println("\n=== Attendance Clock Out ==="); 
+        LocalDate today = LocalDate.now();
+        Attendance currentSession = null;
+
+        // Find active session
+        for (Attendance a : attendanceLogs) {
+            if (a.getEmployeeId().equals(currentUser.getId()) && a.getDate().equals(today) && a.getClockOutTime() == null) {
+                currentSession = a;
+                break;
+            }
+        }
+
+        if (currentSession == null) {
+            System.out.println("Error: No active Clock In record found for today.");
+            return;
+        }
+
+        LocalTime now = LocalTime.now();
+        currentSession.setClockOutTime(now);
+        saveAttendance();
+
+        // Print Receipt
+        System.out.println("Employee ID: " + currentUser.getId());
+        System.out.println("Name: " + currentUser.getName());
+        System.out.println("Outlet: " + currentSession.getOutlet());
+        System.out.println(); // Blank Line
+        System.out.println("Clock Out Successful!"); 
+        System.out.println("Date: " + today);
+        System.out.println("Time: " + formatTime(now));
+
+        // Calculate Decimal Duration (e.g. 8.1 hours)
+        Duration duration = Duration.between(currentSession.getClockInTime(), now);
+        double decimalHours = duration.toMinutes() / 60.0;
+        
+        System.out.printf("Total Hours Worked: %.1f hours%n", decimalHours); 
+    }
+
+    // --- FILE I/O (CSV HANDLING) ---
+    private static void loadData() {
+        try {
+            // Load Employees
+            File empFile = new File(EMPLOYEE_FILE);
+            if (empFile.exists()) {
+                Scanner fSc = new Scanner(empFile);
+                while (fSc.hasNextLine()) {
+                    String line = fSc.nextLine();
+                    if(line.trim().isEmpty()) continue;
+                    String[] parts = line.split(",");
+                    // Expecting 5 parts: ID, Name, Pass, Role, Outlet
+                    if (parts.length >= 5) {
+                        employees.add(new Employee(parts[0], parts[1], parts[2], parts[3], parts[4]));
+                    }
+                }
+                fSc.close();
+            }
+
+            // Load Attendance
+            File attFile = new File(ATTENDANCE_FILE);
+            if (attFile.exists()) {
+                Scanner fSc = new Scanner(attFile);
+                while (fSc.hasNextLine()) {
+                    String line = fSc.nextLine();
+                    if(line.trim().isEmpty()) continue;
+                    String[] parts = line.split(",");
+                    // Expecting 5 parts: EmpID, Date, InTime, OutTime, Outlet
+                    if (parts.length >= 5) {
+                        LocalTime outTime = parts[3].equals("null") ? null : LocalTime.parse(parts[3]);
+                        attendanceLogs.add(new Attendance(
+                            parts[0], 
+                            LocalDate.parse(parts[1]), 
+                            LocalTime.parse(parts[2]), 
+                            outTime,
+                            parts[4]
+                        ));
+                    }
+                }
+                fSc.close();
+            }
+        } catch (IOException e) {
+            System.out.println("Error loading data: " + e.getMessage());
+        }
+    }
+
+    private static void saveEmployees() {
+        try (PrintWriter pw = new PrintWriter(new FileWriter(EMPLOYEE_FILE))) {
+            for (Employee e : employees) {
+                pw.println(e.toCSV());
+            }
+        } catch (IOException e) {
+            System.out.println("Error saving employees: " + e.getMessage());
+        }
+    }
+
+    private static void saveAttendance() {
+        try (PrintWriter pw = new PrintWriter(new FileWriter(ATTENDANCE_FILE))) {
+            for (Attendance a : attendanceLogs) {
+                pw.println(a.toCSV());
+            }
+        } catch (IOException e) {
+            System.out.println("Error saving attendance: " + e.getMessage());
+        }
+    }
+}
