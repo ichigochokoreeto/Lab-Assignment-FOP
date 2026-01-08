@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-// ================= EMPLOYEE =================
+//Employee
 class Employee {
     private String id;
     private String name;
@@ -44,7 +44,7 @@ class Employee {
     public String getOutlet() { return outlet; }
 }
 
-// ================= ATTENDANCE =================
+//Attendance
 class Attendance {
     private String employeeId;
     private LocalDate date;
@@ -52,8 +52,7 @@ class Attendance {
     private LocalTime clockOut;
     private String outlet;
 
-    public Attendance(String employeeId, LocalDate date,
-                      LocalTime clockIn, LocalTime clockOut, String outlet) {
+    public Attendance(String employeeId, LocalDate date, LocalTime clockIn, LocalTime clockOut, String outlet) {
         this.employeeId = employeeId;
         this.date = date;
         this.clockIn = clockIn;
@@ -77,7 +76,7 @@ class Attendance {
     }
 }
 
-// ================= MAIN SYSTEM =================
+//Main System
 public class StoreSystem {
 
     private static final String EMPLOYEE_FILE = "employee.csv";
@@ -91,7 +90,7 @@ public class StoreSystem {
     private static Scanner sc = new Scanner(System.in);
     private static Employee currentUser = null;
 
-    // ================= MAIN =================
+    //Main
     public static void main(String[] args) {
         loadData();
         System.out.println("Loaded employees: " + employees.size());
@@ -105,7 +104,7 @@ public class StoreSystem {
         }
     }
 
-    // ================= LOGIN =================
+    //Login
     private static void loginMenu() {
         System.out.println("\n=== GOLDENHOUR STORE SYSTEM ===");
         System.out.println("1. Login");
@@ -144,7 +143,7 @@ public class StoreSystem {
         System.out.println("Logged out successfully.");
     }
 
-    // ================= MENU =================
+    //Menu
     private static void mainMenu() {
         System.out.println("\n=== Main Menu (" + currentUser.getName() + ") ===");
         System.out.println("1. Clock In");
@@ -172,7 +171,7 @@ public class StoreSystem {
         }
     }
 
-    // ================= REGISTER =================
+    //Register
     private static void registerEmployee() {
         System.out.println("\n=== Register New Employee ===");
         System.out.print("Enter Employee Name: ");
@@ -203,7 +202,7 @@ public class StoreSystem {
             }
         }
 
-        System.out.print("Set Role (Part-time / Full-time): ");
+        System.out.print("Set Role (Part-time/Full-time): ");
         String role = sc.nextLine();
         System.out.print("Set Password: ");
         String pass = sc.nextLine();
@@ -215,7 +214,7 @@ public class StoreSystem {
         System.out.println("Assigned to: " + outlet);
     }
 
-    // ================= ATTENDANCE =================
+    //Attendance
     private static void clockIn() {
         LocalDate today = LocalDate.now();
 
@@ -275,10 +274,10 @@ public class StoreSystem {
                 a.getClockOut() == null ? a.getClockIn() : a.getClockOut()));
     }
 
-    // ================= FILE HANDLING =================
+    //File Handling
     private static void loadData() {
         try {
-            // LOAD OUTLETS
+            //Load outlets
             Scanner oSc = new Scanner(new File(OUTLET_FILE));
             while (oSc.hasNextLine()) {
                 String[] p = oSc.nextLine().split(",");
@@ -286,7 +285,7 @@ public class StoreSystem {
             }
             oSc.close();
 
-            // LOAD EMPLOYEES
+            //Load employees
             Scanner eSc = new Scanner(new File(EMPLOYEE_FILE));
             while (eSc.hasNextLine()) {
                 String[] p = eSc.nextLine().split(",");
@@ -323,9 +322,9 @@ public class StoreSystem {
     }
 
     private static void saveAttendance() {
-        try (PrintWriter pw = new PrintWriter(new FileWriter(ATTENDANCE_FILE))) {
+        try (PrintWriter printWriter = new PrintWriter(new FileWriter(ATTENDANCE_FILE))) {
             for (Attendance a : attendanceLogs) {
-                pw.println(a.toCSV());
+                printWriter.println(a.toCSV());
             }
         } catch (IOException e) {
             System.out.println("Error saving attendance.");
