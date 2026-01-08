@@ -1,4 +1,5 @@
-//create class StoreSystem
+//Create class StoreSystem
+//Import file employee.csv & outlet.csv
 //Manager-> User ID: C6001,Password: a2b1c0
 
 //Login/Logout and Employee Registration
