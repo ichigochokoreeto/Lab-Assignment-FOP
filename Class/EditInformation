@@ -50,6 +50,7 @@ public class EditInformation {
     }
     
     public static void EditSales(List<SaleRecord> sales, Scanner sc) {
+        System.out.println();
         System.out.println("=== Edit Sale Information ===");
         System.out.print("Enter Transaction Date(YYYY-MM-DD): ");
         LocalDate date = LocalDate.parse(sc.nextLine());
